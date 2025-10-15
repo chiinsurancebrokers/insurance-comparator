@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Insurance Policy Comparator | Συγκριτικό Ασφαλιστικών</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState } = React;
+        
+        // Lucide Icons as SVG components
+        const Shield = () => (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+        );
+        
+        const Upload = () => (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+        );
+        
+        const CheckCircle = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+        );
+        
+        const AlertCircle = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+        );
+
+        function InsurancePolicyComparator() {
+            const [userInfo, setUserInfo] = useState({
+                firstName: '',
+                lastName: '',
+                dateOfBirth: '',
+                nationality: '',
+                citizenship: ''
+            });
+            
+            const [policies, setPolicies] = useState([]);
+            const [recommendation, setRecommendation] = useState(null);
+            const [step, setStep] = useState(1);
+            const [language, setLanguage] = useState('en');
+            
+            const translations = {
+                en: {
+                    title: "Insurance Policy Comparator",
+                    step1Title: "Personal Information",
+                    step1Subtitle: "Help us personalize your insurance recommendations",
+                    firstName: "First Name",
+                    lastName: "Last Name",
+                    dateOfBirth: "Date of Birth",
+                    nationality: "Nationality",
+                    citizenship: "Citizenship",
+                    continue: "Continue to Upload Policies",
+                    back: "Back",
+                    step2Title: "Upload Policy Data",
+                    step2Subtitle: "Upload CSV or JSON files with your insurance policies",
+                    chooseFile: "Choose File",
+                    acceptedFormats: "Accepted formats: CSV, JSON",
+                    policiesLoaded: "policies loaded successfully",
+                    analyzePolicies: "Analyze Policies",
+                    recommendationFor: "Recommendation for",
+                    age: "Age",
+                    score: "Score",
+                    annualPremium: "Annual Premium",
+                    excessDeductible: "Excess/Deductible",
+                    whyThisPolicy: "Why This Policy?",
+                    benefitsIncluded: "Benefits Included",
+                    exclusionsTitle: "Exclusions",
+                    otherOptions: "Other Options Considered",
+                    startNew: "Start New Comparison",
+                    errorReading: "Error reading file. Please ensure it is a valid JSON or CSV file.",
+                    completeInfo: "Please complete your information and upload policy data.",
+                    clearAll: "Clear All Policies",
+                    uploadAnother: "Upload Another File"
+                },
+                gr: {
+                    title: "Συγκριτικό Ασφαλιστικών Πολιτικών",
+                    step1Title: "Προσωπικά Στοιχεία",
+                    step1Subtitle: "Βοηθήστε μας να εξατομικεύσουμε τις ασφαλιστικές σας συστάσεις",
+                    firstName: "Όνομα",
+                    lastName: "Επώνυμο",
+                    dateOfBirth: "Ημερομηνία Γέννησης",
+                    nationality: "Εθνικότητα",
+                    citizenship: "Υπηκοότητα",
+                    continue: "Συνέχεια στη Μεταφόρτωση Πολιτικών",
+                    back: "Πίσω",
+                    step2Title: "Μεταφόρτωση Δεδομένων Πολιτικής",
+                    step2Subtitle: "Μεταφορτώστε αρχεία CSV ή JSON με τις ασφαλιστικές σας πολιτικές",
+                    chooseFile: "Επιλογή Αρχείου",
+                    acceptedFormats: "Αποδεκτές μορφές: CSV, JSON",
+                    policiesLoaded: "πολιτικές φορτώθηκαν επιτυχώς",
+                    analyzePolicies: "Ανάλυση Πολιτικών",
+                    recommendationFor: "Σύσταση για",
+                    age: "Ηλικία",
+                    score: "Βαθμολογία",
+                    annualPremium: "Ετήσιο Ασφάλιστρο",
+                    excessDeductible: "Απαλλαγή",
+                    whyThisPolicy: "Γιατί Αυτή η Πολιτική;",
+                    benefitsIncluded: "Παροχές που Περιλαμβάνονται",
+                    exclusionsTitle: "Εξαιρέσεις",
+                    otherOptions: "Άλλες Επιλογές που Εξετάστηκαν",
+                    startNew: "Έναρξη Νέας Σύγκρισης",
+                    errorReading: "Σφάλμα ανάγνωσης αρχείου. Βεβαιωθείτε ότι είναι έγκυρο αρχείο JSON ή CSV.",
+                    completeInfo: "Παρακαλώ συμπληρώστε τα στοιχεία σας και μεταφορτώστε δεδομένα πολιτικής.",
+                    clearAll: "Εκκαθάριση Όλων των Πολιτικών",
+                    uploadAnother: "Μεταφόρτωση Άλλου Αρχείου"
+                }
+            };
+            
+            const t = translations[language];
+            
+            const calculateAge = (dob) => {
+                const today = new Date();
+                const birthDate = new Date(dob);
+                let age = today.getFullYear() - birthDate.getFullYear();
+                const monthDiff = today.getMonth() - birthDate.getMonth();
+                if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                    age--;
+                }
+                return age;
+            };
+            
+            const handleFileUpload = async (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                try {
+                    const text = await file.text();
+                    let parsedPolicies;
+
+                    if (file.name.endsWith('.json')) {
+                        parsedPolicies = JSON.parse(text);
+                    } else if (file.name.endsWith('.csv')) {
+                        const result = Papa.parse(text, { 
+                            header: true, 
+                            dynamicTyping: true, 
+                            skipEmptyLines: true
+                        });
+                        parsedPolicies = result.data;
+                    }
+
+                    setPolicies(prev => {
+                        const newPolicies = Array.isArray(parsedPolicies) ? parsedPolicies : [parsedPolicies];
+                        return [...prev, ...newPolicies];
+                    });
+                } catch (error) {
+                    alert(t.errorReading);
+                }
+            };
+            
+            const analyzePolicies = () => {
+                if (!userInfo.dateOfBirth || policies.length === 0) {
+                    alert(t.completeInfo);
+                    return;
+                }
+
+                const age = calculateAge(userInfo.dateOfBirth);
+                
+                const scoredPolicies = policies.map(policy => {
+                    let score = 0;
+                    let reasoning = [];
+
+                    const premiumScore = policy.premium ? Math.max(0, 100 - (policy.premium / 50)) : 50;
+                    score += premiumScore * 0.35;
+                    reasoning.push({
+                        factor: language === 'en' ? 'Premium' : 'Ασφάλιστρο',
+                        impact: premiumScore > 70 ? 'Positive' : premiumScore > 40 ? 'Neutral' : 'Negative',
+                        detail: `${language === 'en' ? 'Annual premium of' : 'Ετήσιο ασφάλιστρο'} €${policy.premium} ${language === 'en' ? 'is' : 'είναι'} ${premiumScore > 70 ? (language === 'en' ? 'very competitive' : 'πολύ ανταγωνιστικό') : premiumScore > 40 ? (language === 'en' ? 'reasonable' : 'λογικό') : (language === 'en' ? 'relatively high' : 'σχετικά υψηλό')}`
+                    });
+
+                    const excessScore = policy.excess ? Math.max(0, 100 - (policy.excess / 20)) : 50;
+                    score += excessScore * 0.20;
+                    reasoning.push({
+                        factor: language === 'en' ? 'Excess/Deductible' : 'Απαλλαγή',
+                        impact: excessScore > 70 ? 'Positive' : excessScore > 40 ? 'Neutral' : 'Negative',
+                        detail: `${language === 'en' ? 'Excess of' : 'Απαλλαγή'} €${policy.excess} ${language === 'en' ? 'is' : 'είναι'} ${excessScore > 70 ? (language === 'en' ? 'low and affordable' : 'χαμηλή και προσιτή') : excessScore > 40 ? (language === 'en' ? 'moderate' : 'μέτρια') : (language === 'en' ? 'high' : 'υψηλή')}`
+                    });
+
+                    const benefitCount = policy.benefits ? (Array.isArray(policy.benefits) ? policy.benefits.length : String(policy.benefits).split(',').length) : 0;
+                    const benefitScore = Math.min(100, benefitCount * 10);
+                    score += benefitScore * 0.30;
+                    reasoning.push({
+                        factor: language === 'en' ? 'Benefits Coverage' : 'Κάλυψη Παροχών',
+                        impact: benefitScore > 70 ? 'Positive' : benefitScore > 40 ? 'Neutral' : 'Negative',
+                        detail: `${language === 'en' ? 'Includes' : 'Περιλαμβάνει'} ${benefitCount} ${language === 'en' ? 'benefits' : 'παροχές'}`
+                    });
+
+                    const exclusionCount = policy.exclusions ? (Array.isArray(policy.exclusions) ? policy.exclusions.length : String(policy.exclusions).split(',').length) : 0;
+                    const exclusionScore = Math.max(0, 100 - (exclusionCount * 15));
+                    score += exclusionScore * 0.15;
+                    reasoning.push({
+                        factor: language === 'en' ? 'Exclusions' : 'Εξαιρέσεις',
+                        impact: exclusionScore > 70 ? 'Positive' : exclusionScore > 40 ? 'Neutral' : 'Negative',
+                        detail: `${language === 'en' ? 'Has' : 'Έχει'} ${exclusionCount} ${language === 'en' ? 'exclusions' : 'εξαιρέσεις'}`
+                    });
+
+                    return {
+                        ...policy,
+                        totalScore: Math.round(score * 10) / 10,
+                        reasoning
+                    };
+                });
+
+                scoredPolicies.sort((a, b) => b.totalScore - a.totalScore);
+                setRecommendation(scoredPolicies);
+                setStep(3);
+            };
+            
+            const renderStep1 = () => (
+                <div className="space-y-6">
+                    <div className="text-center mb-8">
+                        <div className="w-16 h-16 text-blue-600 mx-auto mb-4 flex items-center justify-center">
+                            <Shield />
+                        </div>
+                        <h2 className="text-2xl font-bold text-gray-800">{t.step1Title}</h2>
+                        <p className="text-gray-600 mt-2">{t.step1Subtitle}</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">{t.firstName}</label>
+                            <input
+                                type="text"
+                                value={userInfo.firstName}
+                                onChange={(e) => setUserInfo(prev => ({ ...prev, firstName: e.target.value }))}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder={language === 'en' ? 'John' : 'Γιάννης'}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">{t.lastName}</label>
+                            <input
+                                type="text"
+                                value={userInfo.lastName}
+                                onChange={(e) => setUserInfo(prev => ({ ...prev, lastName: e.target.value }))}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder={language === 'en' ? 'Doe' : 'Παπαδόπουλος'}
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">{t.dateOfBirth}</label>
+                        <input
+                            type="date"
+                            value={userInfo.dateOfBirth}
+                            onChange={(e) => setUserInfo(prev => ({ ...prev, dateOfBirth: e.target.value }))}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">{t.nationality}</label>
+                            <input
+                                type="text"
+                                value={userInfo.nationality}
+                                onChange={(e) => setUserInfo(prev => ({ ...prev, nationality: e.target.value }))}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder={language === 'en' ? 'American' : 'Ελληνική'}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">{t.citizenship}</label>
+                            <input
+                                type="text"
+                                value={userInfo.citizenship}
+                                onChange={(e) => setUserInfo(prev => ({ ...prev, citizenship: e.target.value }))}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder={language === 'en' ? 'United States' : 'Ελλάδα'}
+                            />
+                        </div>
+                    </div>
+
+                    <button
+                        onClick={() => setStep(2)}
+                        disabled={!userInfo.firstName || !userInfo.lastName || !userInfo.dateOfBirth}
+                        className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition"
+                    >
+                        {t.continue}
+                    </button>
+                </div>
+            );
+            
+            const renderStep2 = () => (
+                <div className="space-y-6">
+                    <div className="text-center mb-8">
+                        <div className="w-16 h-16 text-blue-600 mx-auto mb-4 flex items-center justify-center">
+                            <Upload />
+                        </div>
+                        <h2 className="text-2xl font-bold text-gray-800">{t.step2Title}</h2>
+                        <p className="text-gray-600 mt-2">{t.step2Subtitle}</p>
+                    </div>
+
+                    <div className="bg-blue-50 border-2 border-blue-200 border-dashed rounded-lg p-8 text-center">
+                        <label className="cursor-pointer">
+                            <span className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 inline-block">
+                                {t.chooseFile}
+                            </span>
+                            <input
+                                type="file"
+                                accept=".csv,.json"
+                                onChange={handleFileUpload}
+                                className="hidden"
+                            />
+                        </label>
+                        <p className="text-sm text-gray-600 mt-4">{t.acceptedFormats}</p>
+                    </div>
+
+                    {policies.length > 0 && (
+                        <div className="space-y-3">
+                            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <CheckCircle />
+                                        <span className="text-green-800 font-medium">{policies.length} {t.policiesLoaded}</span>
+                                    </div>
+                                    <button
+                                        onClick={() => setPolicies([])}
+                                        className="text-sm text-red-600 hover:text-red-700 font-medium"
+                                    >
+                                        {t.clearAll}
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
+                                <p className="text-sm text-blue-700">{t.uploadAnother}</p>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="flex gap-4">
+                        <button
+                            onClick={() => setStep(1)}
+                            className="flex-1 bg-gray-200 text-gray-800 py-3 rounded-lg font-semibold hover:bg-gray-300 transition"
+                        >
+                            {t.back}
+                        </button>
+                        <button
+                            onClick={analyzePolicies}
+                            disabled={policies.length === 0}
+                            className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition"
+                        >
+                            {t.analyzePolicies}
+                        </button>
+                    </div>
+                </div>
+            );
+            
+            const renderStep3 = () => {
+                if (!recommendation || recommendation.length === 0) return null;
+
+                const bestPolicy = recommendation[0];
+                const age = calculateAge(userInfo.dateOfBirth);
+
+                return (
+                    <div className="space-y-6">
+                        <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg p-6">
+                            <h2 className="text-2xl font-bold">{t.recommendationFor} {userInfo.firstName} {userInfo.lastName}</h2>
+                            <p className="text-blue-100">{t.age}: {age} | {userInfo.nationality}</p>
+                        </div>
+
+                        <div className="bg-green-50 border-2 border-green-500 rounded-lg p-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-2xl font-bold text-gray-800">{bestPolicy.policyName}</h3>
+                                <span className="bg-green-500 text-white px-4 py-2 rounded-full font-bold">
+                                    {t.score}: {bestPolicy.totalScore}/100
+                                </span>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4 mb-4">
+                                <div className="bg-white rounded-lg p-4">
+                                    <p className="text-sm text-gray-600">{t.annualPremium}</p>
+                                    <p className="text-2xl font-bold text-gray-800">€{bestPolicy.premium}</p>
+                                </div>
+                                <div className="bg-white rounded-lg p-4">
+                                    <p className="text-sm text-gray-600">{t.excessDeductible}</p>
+                                    <p className="text-2xl font-bold text-gray-800">€{bestPolicy.excess}</p>
+                                </div>
+                            </div>
+
+                            <div className="bg-white rounded-lg p-4 mb-4">
+                                <h4 className="font-semibold text-gray-800 mb-2">{t.whyThisPolicy}</h4>
+                                <div className="space-y-2">
+                                    {bestPolicy.reasoning.map((reason, idx) => (
+                                        <div key={idx} className="flex items-start gap-2">
+                                            {reason.impact === 'Positive' ? <CheckCircle /> : <AlertCircle />}
+                                            <div>
+                                                <p className="font-medium text-gray-800">{reason.factor}</p>
+                                                <p className="text-sm text-gray-600">{reason.detail}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={() => {
+                                setStep(1);
+                                setPolicies([]);
+                                setRecommendation(null);
+                            }}
+                            className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
+                        >
+                            {t.startNew}
+                        </button>
+                    </div>
+                );
+            };
+            
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+                    <div className="max-w-4xl mx-auto">
+                        <div className="bg-white rounded-2xl shadow-xl p-8">
+                            <div className="flex justify-between items-start mb-8">
+                                <h1 className="text-3xl font-bold text-gray-800">{t.title}</h1>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setLanguage('en')}
+                                        className={`px-4 py-2 rounded-lg font-semibold transition ${
+                                            language === 'en' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'
+                                        }`}
+                                    >
+                                        EN
+                                    </button>
+                                    <button
+                                        onClick={() => setLanguage('gr')}
+                                        className={`px-4 py-2 rounded-lg font-semibold transition ${
+                                            language === 'gr' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'
+                                        }`}
+                                    >
+                                        ΕΛ
+                                    </button>
+                                </div>
+                            </div>
+
+                            {step === 1 && renderStep1()}
+                            {step === 2 && renderStep2()}
+                            {step === 3 && renderStep3()}
+                        </div>
+                        
+                        <footer className="text-center mt-8 text-gray-600 text-sm">
+                            <p>© 2025 Insurance Policy Comparator | Made with ❤️ for better decisions</p>
+                        </footer>
+                    </div>
+                </div>
+            );
+        }
+        
+        ReactDOM.render(<InsurancePolicyComparator />, document.getElementById('root'));
+    </script>
+</body>
+</html>
